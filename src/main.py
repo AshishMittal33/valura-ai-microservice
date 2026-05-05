@@ -26,11 +26,7 @@ async def query_endpoint(request: Request):
 
     async def stream():
         try:
-            # SAFETY
-            yield {
-                "event": "message",
-                "data": json.dumps({"stage": "safety", "message": "Checking safety..."})
-            }
+            yield {"event": "message", "data": json.dumps({"stage": "safety", "message": "Checking safety..."})}
 
             s = safety.check(query)
 
@@ -38,44 +34,19 @@ async def query_endpoint(request: Request):
                 yield {"event": "error", "data": json.dumps(s)}
                 return
 
-            # CLASSIFICATION
-            yield {
-                "event": "message",
-                "data": json.dumps({"stage": "classification", "message": "Classifying..."})
-            }
+            yield {"event": "message", "data": json.dumps({"stage": "classification", "message": "Classifying..."})}
 
             c = await classifier.classify(query)
 
-            yield {
-                "event": "message",
-                "data": json.dumps({"stage": "classification_result", "data": c})
-            }
+            yield {"event": "message", "data": json.dumps({"stage": "classification_result", "data": c})}
 
-            # ROUTING
-            yield {
-                "event": "message",
-                "data": json.dumps({"stage": "routing", "message": "Routing..."})
-            }
+            yield {"event": "message", "data": json.dumps({"stage": "routing", "message": "Routing..."})}
 
-            try:
-                result = await router.route(c, portfolio, query)
-            except Exception as e:
-                yield {
-                    "event": "error",
-                    "data": json.dumps({"message": f"Router error: {str(e)}"})
-                }
-                return
+            result = await router.route(c, portfolio, query)
 
-            # FINAL
-            yield {
-                "event": "message",
-                "data": json.dumps({"stage": "final", "data": result})
-            }
+            yield {"event": "message", "data": json.dumps({"stage": "final", "data": result})}
 
         except Exception as e:
-            yield {
-                "event": "error",
-                "data": json.dumps({"message": f"Stream error: {str(e)}"})
-            }
+            yield {"event": "error", "data": json.dumps({"message": str(e)})}
 
     return EventSourceResponse(stream())
