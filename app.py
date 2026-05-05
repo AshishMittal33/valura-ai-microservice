@@ -48,7 +48,7 @@ if st.button("Run Analysis"):
                         result = data["data"]
                         placeholder.success("✅ Final Result")
 
-                        # 🔥 HANDLE GENERAL QUESTION (IMPORTANT FIX)
+                      
                         if "message" in result:
                             st.subheader("💬 Response")
                             st.write(result["message"])
@@ -76,7 +76,7 @@ if st.button("Run Analysis"):
                                 else:
                                     st.info(obs["text"])
 
-                        # ALWAYS show disclaimer at end
+                     
                         if "disclaimer" in result:
                             st.caption(result["disclaimer"])
 
