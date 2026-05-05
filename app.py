@@ -5,84 +5,119 @@ import json
 
 API_URL = "http://127.0.0.1:8000/query"
 
-st.set_page_config(page_title="Valura AI", layout="wide")
-st.title("📊 Valura AI - Portfolio Assistant")
-
-query = st.text_input(
-    "Ask your portfolio question",
-    "My portfolio has AAPL 60000 TSLA 20000 HDFC 20000. How is it doing?"
+# ---------- PAGE CONFIG ----------
+st.set_page_config(
+    page_title="Valura AI",
+    page_icon="📊",
+    layout="wide"
 )
 
-if st.button("Run Analysis"):
-    payload = {"query": query, "context": {}}
-    placeholder = st.empty()
+# ---------- HEADER ----------
+st.markdown("""
+<h1 style='text-align: center;'>📊 Valura AI</h1>
+<p style='text-align: center; color: gray;'>Smart Portfolio Analysis with AI</p>
+""", unsafe_allow_html=True)
 
-    try:
-        with requests.post(API_URL, json=payload, stream=True) as response:
-            client = sseclient.SSEClient(response)
+st.divider()
 
-            for event in client.events():
-                if not event.data:
-                    continue
+# ---------- INPUT SECTION ----------
+with st.container():
+    st.subheader("💬 Ask Your Query")
 
-                data = json.loads(event.data)
+    query = st.text_input(
+        "Enter your query",
+        "My portfolio has AAPL 60000 TSLA 20000",
+        label_visibility="collapsed"
+    )
 
-                if event.event == "message":
+    col1, col2, col3 = st.columns([1, 2, 1])
 
-                    stage = data.get("stage")
+    with col2:
+        run_button = st.button("🚀 Run Analysis", use_container_width=True)
 
-                    if stage == "safety":
-                        placeholder.info(data["message"])
+st.divider()
 
-                    elif stage == "classification":
-                        placeholder.info(data["message"])
+# ---------- RESPONSE SECTION ----------
+if run_button:
 
-                    elif stage == "classification_result":
-                        st.success("Classification Done")
-                        st.json(data["data"])
+    payload = {"query": query}
 
-                    elif stage == "routing":
-                        placeholder.info(data["message"])
+    with st.spinner("Analyzing..."):
+        try:
+            with requests.post(API_URL, json=payload, stream=True) as response:
+                client = sseclient.SSEClient(response)
 
-                    elif stage == "final":
-                        result = data["data"]
-                        placeholder.success("✅ Final Result")
+                for event in client.events():
+                    if not event.data:
+                        continue
 
-                      
-                        if "message" in result:
-                            st.subheader("💬 Response")
-                            st.write(result["message"])
+                    data = json.loads(event.data)
 
-                        if "help" in result:
-                            st.info(result["help"])
+                    if event.event == "message":
 
-                        if "query" in result:
-                            st.caption(f"Query: {result['query']}")
+                        stage = data.get("stage")
 
-                        # 🔥 PORTFOLIO CASE
-                        if "concentration_risk" in result:
-                            st.subheader("📌 Concentration Risk")
-                            st.json(result["concentration_risk"])
+                        # -------- STATUS ----------
+                        if stage == "safety":
+                            st.info("🔒 Checking safety...")
 
-                        if "performance" in result:
-                            st.subheader("📈 Performance")
-                            st.json(result["performance"])
+                        elif stage == "classification":
+                            st.info("🧠 Classifying query...")
 
-                        if "observations" in result:
-                            st.subheader("🧠 Observations")
-                            for obs in result["observations"]:
-                                if obs["severity"] == "warning":
-                                    st.warning(obs["text"])
-                                else:
-                                    st.info(obs["text"])
+                        elif stage == "routing":
+                            st.info("🔀 Routing request...")
 
-                     
-                        if "disclaimer" in result:
-                            st.caption(result["disclaimer"])
+                        elif stage == "classification_result":
+                            with st.expander("🧠 Classification Details"):
+                                st.json(data["data"])
 
-                elif event.event == "error":
-                    placeholder.error(data["message"])
-                    break
+                        # -------- FINAL RESULT ----------
+                        elif stage == "final":
+                            result = data["data"]
 
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+                            st.success("✅ Analysis Complete")
+
+                            st.divider()
+
+                            # -------- GENERAL RESPONSE ----------
+                            if "message" in result:
+                                st.subheader("💬 Response")
+                                st.write(result["message"])
+
+                            if "help" in result:
+                                st.info(result["help"])
+
+                            # -------- PORTFOLIO METRICS ----------
+                            if "total_value" in result:
+                                col1, col2 = st.columns(2)
+
+                                col1.metric("💰 Total Value", f"${result['total_value']:,}")
+                                col2.metric("🏆 Top Stock", result["top_stock"])
+
+                            if "concentration_risk" in result:
+                                risk = result["concentration_risk"]
+
+                                st.subheader("📊 Risk Analysis")
+
+                                col1, col2 = st.columns(2)
+
+                                col1.metric("Top Position %", f"{risk['top_position_pct']}%")
+                                col2.metric("Risk Level", risk["flag"].upper())
+
+                            if "performance" in result:
+                                st.subheader("📈 Performance")
+                                st.metric(
+                                    "Return %",
+                                    f"{result['performance']['total_return_pct']}%"
+                                )
+
+                            # -------- DISCLAIMER ----------
+                            if "disclaimer" in result:
+                                st.divider()
+                                st.caption(result["disclaimer"])
+
+                    elif event.event == "error":
+                        st.error(data["message"])
+
+        except Exception as e:
+            st.error(f"Error: {str(e)}")

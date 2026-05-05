@@ -10,15 +10,12 @@ class Router:
     async def route(self, classification, portfolio, query):
         agent = classification.get("agent")
 
-        # ✅ Portfolio agent
         if agent == "portfolio_health":
             return await self.portfolio_agent.run(portfolio)
 
-        # ✅ General question agent
         elif agent == "general_question":
             return await self.general_agent.run(query)
 
-        # ✅ fallback
         return {
             "message": "Could not understand request",
             "disclaimer": "Not financial advice"
